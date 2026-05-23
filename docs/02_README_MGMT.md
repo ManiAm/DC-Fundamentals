@@ -70,13 +70,16 @@ Often labeled as MGMT or marked with a wrench icon, this is a standard Ethernet 
 
 **The Baseboard Management Controller (BMC)**
 
-Many modern open networking and whitebox switches (such as those from Edgecore or Celestica) are essentially specialized servers, and therefore feature a BMC for low-level hardware control. The BMC allows you to monitor temperatures, control fan speeds, cycle the power supply, or reinstall the switch OS via virtual media, even if the main switch CPU is powered down or locked up.
+Not all switches have a BMC. Many 1U open networking switches have no BMC at all. On these platforms, all platform management (fan speed control, thermal monitoring, PSU status, LED state) is handled by CPLDs on the management board, accessed over I2C from the main CPU running the NOS. If the NOS crashes or the CPU hangs, there is no independent controller to monitor thermals or initiate a safe shutdown; the CPLDs continue driving fans at their last commanded speed, but there is no intelligent failsafe beyond that.
 
-On some modular switches, the BMC has its own dedicated physical port. However, on most dense 1RU Top-of-Rack switches, the BMC shares the standard Management (MGMT) port using the NC-SI (Network Controller Sideband Interface) protocol. The single physical cable accepts traffic for both the Switch OS and the BMC, with the NIC firmware routing incoming frames internally based on their destination MAC addresses.
+Newer and higher-end open networking switches do include a BMC for low-level hardware control. The BMC is an independent microcontroller that runs on standby power. It allows administrators to monitor temperatures, control fan speeds, cycle the power supply, or reinstall the switch OS via virtual media, even if the main switch CPU is powered down or locked up.
+
+On some modular switches, the BMC has its own dedicated physical port. However, on most dense 1RU switches that include a BMC, it shares the standard Management (MGMT) port using the NC-SI (Network Controller Sideband Interface) protocol. The single physical cable accepts traffic for both the Switch OS and the BMC, with the NIC firmware routing incoming frames internally based on their destination MAC addresses.
 
 
 | Feature              | Console Port                                  | Dedicated Management Port (OOB)              | BMC Port (Dedicated or NC-SI Shared)                                       |
 | -------------------- | --------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| Presence             | Standard on all switches.                     | Standard on all switches.                    | Not universal. Absent on many 1U switches (e.g., DX010); present on newer platforms (e.g., DX030). |
 | Primary Use Case     | Initial setup, password recovery, OS failure. | Daily remote administration, config backups. | Hardware monitoring, remote power cycling, low-level recovery.             |
 | Connection Type      | Serial (RJ-45, DB9, or USB).                  | Ethernet (RJ-45).                            | Ethernet (RJ-45).                                                          |
 | IP Address Required? | No.                                           | Yes.                                         | Yes.                                                                       |
