@@ -95,7 +95,7 @@ However, High-Performance Computing and AI demand a **Non-Blocking** (1:1) archi
 
 
 
-## Logical Topology: The Evolution of the Network
+## Logical Topology: Architectural Blueprints
 
 So far we have established that each rack has a Top-of-Rack switch connecting all servers within it. The next question is: how do we connect these racks to each other? The logical topology is the blueprint that answers this — it defines the switching and routing hierarchy that ties individual racks into a unified network.
 
@@ -130,7 +130,7 @@ As Big Data and Cloud Computing arrived, East-West traffic exploded. The old thr
 
 **The Clos Network**
 
-The Leaf-Spine topology is a practical implementation of the Clos network, a mathematical switching architecture invented by Charles Clos at Bell Labs in 1953. Clos originally solved a telephone exchange problem: how to connect any caller to any receiver without blocking, using many small, inexpensive switches instead of one impossibly large switch. The key insight is that if you arrange switches into stages and connect every switch in one stage to every switch in the next stage, you can guarantee that a non-blocking path always exists between any input and any output.
+The Leaf-Spine topology is a practical implementation of the Clos network, a mathematical switching architecture invented by Charles Clos at Bell Labs in 1953. Clos originally solved a telephone exchange problem: how to connect any caller to any receiver without blocking, using many small, inexpensive switches instead of one impossibly large switch. The key insight is that if you arrange switches into stages and connect every switch in one stage to every switch in the next stage, you can guarantee that a **non-blocking path** always exists between any input and any output.
 
 Data center engineers adopted the same principle. Instead of telephone circuits, the inputs and outputs are servers, and the switches are commodity network devices. The result is a fabric where every server can reach every other server through multiple parallel paths, using only small, identical switches arranged in stages.
 
@@ -164,21 +164,11 @@ Traffic between servers in different pods traverses five stages: leaf → spine 
 - **All Links Active (ECMP instead of STP):** Unlike three-tier networks that relied on Layer 2 Spanning Tree Protocol (STP) to shut down redundant links, a Leaf-Spine fabric operates primarily at Layer 3 using [Equal-Cost Multi-Path (ECMP)](https://github.com/ManiAm/GNS-DC-Load-Balancing/blob/master/01_README_LB.md#ecmp-equal-cost-multi-pathing) routing.
 
 
-### Common Hardware by Role
+### Subscription Ratio in Leaf-Spine
 
-The table below maps network roles to the hardware platforms most commonly deployed in the industry. The three-tier topology is dominated by traditional enterprise vendors (Cisco and Juniper), while Leaf-Spine fabrics introduced Arista as a major force alongside open networking platforms.
+The Clos structure guarantees that multiple paths exist and that all links carry traffic. However, multiple active paths do not make the fabric non-blocking by default. The [subscription ratio](#subscription) applies at the leaf layer just as it does at any individual switch: if a leaf dedicates more port bandwidth downward to servers than upward to spines, the fabric is oversubscribed, and congestion is possible when many servers transmit simultaneously.
 
-| Role                        | Cisco         | Juniper    | Arista        | Open Networking  |
-| --------------------------- | ------------- | ---------- | ------------- | ---------------- |
-| **Three-Tier: Access**      | Catalyst 9300 | EX4300     | —             | —                |
-| **Three-Tier: Aggregation** | Catalyst 9500 | EX4600     | —             | —                |
-| **Three-Tier: Core**        | Nexus 9000    | QFX10000   | —             | —                |
-| **Leaf-Spine: Leaf (ToR)**  | Nexus 9300    | QFX5120    | 7050X / 7060X | Edgecore (SONiC) |
-| **Leaf-Spine: Spine**       | Nexus 9500    | QFX5220    | 7500R / 7800R | Edgecore (SONiC) |
-| **Leaf-Spine: Super-Spine** | Nexus 9500    | QFX5230    | 7800R         | Edgecore (SONiC) |
-| **WAN / DC Interconnect**   | Cisco 8000    | PTX Series | 7280R         | —                |
-
-Arista is largely absent from the three-tier column because the company was founded in 2004 (as Arastra, Inc., rebranding to Arista Networks in 2008) specifically to build Leaf-Spine fabrics for cloud and hyperscale data centers. Its switches run EOS (Extensible Operating System), a Linux-based platform heavily favored for automation and programmability. The open networking column represents white-box switches running vendor-neutral operating systems like SONiC (Software for Open Networking in the Cloud), originally developed by Microsoft for Azure. The "WAN / DC Interconnect" row sits outside the data center fabric itself. These are service-provider-class routers that handle BGP full tables, long-haul transport between data center sites, and peering at internet exchange points.
+For example, a 48-port leaf switch that allocates 32 ports down to servers and 16 ports up to spines (all at the same speed) has a 2:1 oversubscription ratio. Under worst-case traffic, each server can sustain only half its line rate. This is acceptable for enterprise workloads with bursty, unpredictable traffic — a 3:1 or even 6:1 ratio is common in cost-sensitive environments. But for AI training and HPC, where GPUs must communicate at full rate without contention, any oversubscription is unacceptable.
 
 
 ### Bisection Bandwidth
@@ -199,7 +189,7 @@ In the example above, if all eight servers could communicate at full line rate a
 
 **Oversubscription as a Bisection Metric**
 
-Oversubscription (introduced in the Subscription section) can now be understood in terms of bisection bandwidth. It is the ratio of full bisection bandwidth to actual bisection bandwidth: 4 Gbps ÷ 2 Gbps = **2:1**. Under worst-case traffic, each server can only sustain half its line rate. A network with full bisection bandwidth has an oversubscription ratio of 1:1 (non-blocking).
+Oversubscription can now be understood in terms of bisection bandwidth. It is the ratio of full bisection bandwidth to actual bisection bandwidth: 4 Gbps ÷ 2 Gbps = **2:1**. Under worst-case traffic, each server can only sustain half its line rate. A network with full bisection bandwidth has an oversubscription ratio of 1:1 (non-blocking).
 
 The bottleneck is visible at the per-leaf level as well: each leaf has 4 Gbps of downlink bandwidth (four server-facing ports) but only 2 Gbps of uplink bandwidth (two spine-facing ports) — a 2:1 mismatch.
 
@@ -295,6 +285,23 @@ The block-based Clos was pioneered by Google in their [Jupiter data center netwo
 The following diagram reveals the physical structure inside each block. Google builds both blocks from identical **merchant silicon** switch chips (16x40G ports each), packaged into custom switch units called **Centauri** (32x40G up + 32x40G down). Multiple Centauri switches are assembled into **Middle Blocks (MBs)**, which are then combined to form the full aggregation block (32 MBs, 512x40G uplinks) or spine block (128x40G downlinks to 64 aggregation blocks). The design is recursive: each level — chip, switch, middle block, full block — is a self-contained Clos, making the entire fabric a Clos-of-Closses.
 
 <img src="../pics/clos-block-detail.png" width="600"/>
+
+
+### Common Hardware by Role
+
+The table below maps network roles to the hardware platforms most commonly deployed in the industry. The three-tier topology is dominated by traditional enterprise vendors (Cisco and Juniper), while Leaf-Spine fabrics introduced Arista as a major force alongside open networking platforms.
+
+| Role                        | Cisco         | Juniper    | Arista        | Open Networking  |
+| --------------------------- | ------------- | ---------- | ------------- | ---------------- |
+| **Three-Tier: Access**      | Catalyst 9300 | EX4300     | —             | —                |
+| **Three-Tier: Aggregation** | Catalyst 9500 | EX4600     | —             | —                |
+| **Three-Tier: Core**        | Nexus 9000    | QFX10000   | —             | —                |
+| **Leaf-Spine: Leaf (ToR)**  | Nexus 9300    | QFX5120    | 7050X / 7060X | Edgecore (SONiC) |
+| **Leaf-Spine: Spine**       | Nexus 9500    | QFX5220    | 7500R / 7800R | Edgecore (SONiC) |
+| **Leaf-Spine: Super-Spine** | Nexus 9500    | QFX5230    | 7800R         | Edgecore (SONiC) |
+| **WAN / DC Interconnect**   | Cisco 8000    | PTX Series | 7280R         | —                |
+
+Arista is largely absent from the three-tier column because the company was founded in 2004 (as Arastra, Inc., rebranding to Arista Networks in 2008) specifically to build Leaf-Spine fabrics for cloud and hyperscale data centers. Its switches run EOS (Extensible Operating System), a Linux-based platform heavily favored for automation and programmability. The open networking column represents white-box switches running vendor-neutral operating systems like SONiC (Software for Open Networking in the Cloud), originally developed by Microsoft for Azure. The "WAN / DC Interconnect" row sits outside the data center fabric itself. These are service-provider-class routers that handle BGP full tables, long-haul transport between data center sites, and peering at internet exchange points.
 
 
 ## Server-Centric Topologies
