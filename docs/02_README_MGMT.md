@@ -43,15 +43,15 @@ When looking at the back of an enterprise server, you will see a mix of producti
 
 **Out-of-Band Management Ports**
 
-- Dedicated Ethernet Management Port: This looks like a standard network port, but it is wired directly to a Baseboard Management Controller (BMC) - a tiny, independent microcomputer built onto the motherboard. Because the BMC runs on standby power, it is awake the moment the server is plugged into the wall, even if the server is turned off. It allows admins to remotely power cycle the machine, check temperatures, or reinstall the OS via a web browser. Dell brands their BMC interface as iDRAC and HP brands theirs as iLO.
+- **Dedicated Ethernet Management Port:** This looks like a standard network port, but it is wired directly to a Baseboard Management Controller (BMC) - a tiny, independent microcomputer built onto the motherboard. Because the BMC runs on standby power, it is awake the moment the server is plugged into the wall, even if the server is turned off. It allows admins to remotely power cycle the machine, check temperatures, or reinstall the OS via a web browser. Dell brands their BMC interface as `iDRAC` and HP brands theirs as `iLO`.
 
-- Serial Port: This is a legacy, raw hardware-level port (RS-232). It provides direct, low-level text access to the device's command line. It is essential for "bare metal" recovery when a system is fresh from the factory with no IP address, or if it is stuck in a boot loop.
+- **Serial Port:** This is a legacy, raw hardware-level port (RS-232). It provides direct, low-level text access to the device's command line. It is essential for "bare metal" recovery when a system is fresh from the factory with no IP address, or if it is stuck in a boot loop.
 
 **The Production Data Ports**
 
-- Standard Ethernet Ports: These are permanently soldered network interfaces built directly into the motherboard, providing baseline 1 Gbps connections.
+- **Standard Ethernet Ports:** These are permanently soldered network interfaces built directly into the motherboard, providing baseline 1 Gbps connections.
 
-- LOM Riser Ports: LOM stands for LAN on Motherboard. While LOM generically refers to any network interface integrated into the motherboard, Dell PowerEdge servers implement it as a proprietary, modular riser slot. This allows administrators to swap in network upgrades (like 10GbE or fiber modules) without consuming a standard PCIe expansion slot.
+- **LOM Riser Ports:** LOM stands for LAN on Motherboard. While LOM generically refers to any network interface integrated into the motherboard, Dell PowerEdge servers implement it as a proprietary, modular riser slot. This allows administrators to swap in network upgrades (like 10GbE or fiber modules) without consuming a standard PCIe expansion slot.
 
 
 ### Switch and Router Management Ports
